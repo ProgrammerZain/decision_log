@@ -3,7 +3,12 @@ import { Menu, X, Layers } from 'lucide-react';
 import { Button } from '../common';
 import { NAV_ITEMS } from '../constants';
 
-export const Navbar: React.FC = () => {
+interface NavbarProps {
+  currentView: 'landing' | 'demo';
+  onNavigate: (view: 'landing' | 'demo') => void;
+}
+
+export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -16,7 +21,8 @@ export const Navbar: React.FC = () => {
   }, []);
 
   const handleDemoClick = () => {
-    alert("🚀 Decision Log Demo is launching! In a live environment, this would redirect you to the sandbox environment.");
+    onNavigate('demo');
+    setIsOpen(false);
   };
 
   return (
@@ -28,7 +34,10 @@ export const Navbar: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-12">
           {/* Logo */}
-          <div className="flex-shrink-0 flex items-center gap-2 cursor-pointer group">
+          <div 
+            onClick={() => onNavigate('landing')}
+            className="flex-shrink-0 flex items-center gap-2 cursor-pointer group"
+          >
             <div className="relative">
               <div className="absolute -inset-1 bg-gradient-to-r from-royal-violet-500 to-mauve-magic-500 rounded-lg blur-sm opacity-50 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="relative bg-dark-amethyst-400 p-2 rounded-lg border border-royal-violet-500/30 flex items-center justify-center">
@@ -42,22 +51,34 @@ export const Navbar: React.FC = () => {
 
           {/* Desktop Nav Items */}
           <div className="hidden md:flex items-center gap-8">
-            {NAV_ITEMS.map((item) => (
-              <a
-                key={item.label}
-                href={item.href}
-                className="text-sm text-mauve-600 hover:text-white transition-colors duration-150 font-medium relative py-1 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-mauve-magic-500 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-200 after:origin-left"
-              >
-                {item.label}
-              </a>
-            ))}
+            {currentView === 'landing' ? (
+              NAV_ITEMS.map((item) => (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  className="text-sm text-mauve-600 hover:text-white transition-colors duration-150 font-medium relative py-1 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-mauve-magic-500 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-200 after:origin-left"
+                >
+                  {item.label}
+                </a>
+              ))
+            ) : (
+              <span className="text-xs text-mauve-magic-500 font-bold bg-royal-violet-600/10 border border-royal-violet-500/30 px-3.5 py-1.5 rounded-xl animate-pulse">
+                Interactive Sandbox Active
+              </span>
+            )}
           </div>
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center">
-            <Button variant="primary" size="sm" onClick={handleDemoClick}>
-              Try Demo
-            </Button>
+            {currentView === 'landing' ? (
+              <Button variant="primary" size="sm" onClick={handleDemoClick}>
+                Try Demo
+              </Button>
+            ) : (
+              <Button variant="secondary" size="sm" onClick={() => onNavigate('landing')}>
+                Back to Website
+              </Button>
+            )}
           </div>
 
           {/* Mobile Menu Toggle */}
@@ -77,21 +98,35 @@ export const Navbar: React.FC = () => {
         isOpen ? 'max-h-screen opacity-100 py-4 px-4' : 'max-h-0 opacity-0 pointer-events-none'
       }`}>
         <div className="flex flex-col gap-4">
-          {NAV_ITEMS.map((item) => (
-            <a
-              key={item.label}
-              href={item.href}
-              onClick={() => setIsOpen(false)}
-              className="text-base text-mauve-600 hover:text-white py-2 border-b border-indigo-ink-500/5 transition-colors font-medium"
-            >
-              {item.label}
-            </a>
-          ))}
-          <Button variant="primary" size="md" fullWidth className="mt-2" onClick={handleDemoClick}>
-            Try Demo
-          </Button>
+          {currentView === 'landing' ? (
+            <>
+              {NAV_ITEMS.map((item) => (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  onClick={() => setIsOpen(false)}
+                  className="text-base text-mauve-600 hover:text-white py-2 border-b border-indigo-ink-500/5 transition-colors font-medium text-left"
+                >
+                  {item.label}
+                </a>
+              ))}
+              <Button variant="primary" size="md" fullWidth className="mt-2" onClick={handleDemoClick}>
+                Try Demo
+              </Button>
+            </>
+          ) : (
+            <>
+              <span className="text-sm text-center text-mauve-magic-500 font-bold bg-royal-violet-600/20 border border-royal-violet-500/30 px-3 py-2.5 rounded-lg">
+                Interactive Sandbox Active
+              </span>
+              <Button variant="secondary" size="md" fullWidth className="mt-2" onClick={() => { onNavigate('landing'); setIsOpen(false); }}>
+                Back to Website
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </nav>
   );
 };
+
