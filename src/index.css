@@ -1,8 +1,148 @@
 @import "tailwindcss";
 
+@theme {
+  --color-dark-amethyst: #10002b;
+  --color-dark-amethyst-100: #030008;
+  --color-dark-amethyst-200: #060010;
+  --color-dark-amethyst-300: #090018;
+  --color-dark-amethyst-400: #0c0021;
+  --color-dark-amethyst-500: #10002b;
+  --color-dark-amethyst-600: #310087;
+  --color-dark-amethyst-700: #5400e4;
+  --color-dark-amethyst-800: #8843ff;
+  --color-dark-amethyst-900: #c4a1ff;
+
+  --color-violet-midnight: #240046;
+  --color-violet-midnight-100: #07000e;
+  --color-violet-midnight-200: #0f001d;
+  --color-violet-midnight-300: #16002b;
+  --color-violet-midnight-400: #1e0039;
+  --color-violet-midnight-500: #240046;
+  --color-violet-midnight-600: #52009f;
+  --color-violet-midnight-700: #8000f7;
+  --color-violet-midnight-800: #aa50ff;
+  --color-violet-midnight-900: #d5a7ff;
+
+  --color-indigo-ink: #3c096c;
+  --color-indigo-ink-100: #0c0216;
+  --color-indigo-ink-200: #18042b;
+  --color-indigo-ink-300: #240541;
+  --color-indigo-ink-400: #300757;
+  --color-indigo-ink-500: #3c096c;
+  --color-indigo-ink-600: #650fb5;
+  --color-indigo-ink-700: #8d25ed;
+  --color-indigo-ink-800: #b36ef3;
+  --color-indigo-ink-900: #d9b6f9;
+
+  --color-indigo-velvet: #5a189a;
+  --color-indigo-velvet-100: #12051f;
+  --color-indigo-velvet-200: #240a3e;
+  --color-indigo-velvet-300: #360e5d;
+  --color-indigo-velvet-400: #47137c;
+  --color-indigo-velvet-500: #5a189a;
+  --color-indigo-velvet-600: #7a21d4;
+  --color-indigo-velvet-700: #9c53e4;
+  --color-indigo-velvet-800: #bd8ced;
+  --color-indigo-velvet-900: #dec6f6;
+
+  --color-royal-violet: #7b2cbf;
+  --color-royal-violet-100: #180926;
+  --color-royal-violet-200: #31114c;
+  --color-royal-violet-300: #491a73;
+  --color-royal-violet-400: #622399;
+  --color-royal-violet-500: #7b2cbf;
+  --color-royal-violet-600: #954bd6;
+  --color-royal-violet-700: #b078e0;
+  --color-royal-violet-800: #caa5eb;
+  --color-royal-violet-900: #e5d2f5;
+
+  --color-lavender-purple: #9d4edd;
+  --color-lavender-purple-100: #200a33;
+  --color-lavender-purple-200: #401365;
+  --color-lavender-purple-300: #601d98;
+  --color-lavender-purple-400: #8127ca;
+  --color-lavender-purple-500: #9d4edd;
+  --color-lavender-purple-600: #b172e4;
+  --color-lavender-purple-700: #c596eb;
+  --color-lavender-purple-800: #d8b9f2;
+  --color-lavender-purple-900: #ecdcf8;
+
+  --color-mauve-magic: #c77dff;
+  --color-mauve-magic-100: #2b004d;
+  --color-mauve-magic-200: #570099;
+  --color-mauve-magic-300: #8200e6;
+  --color-mauve-magic-400: #a733ff;
+  --color-mauve-magic-500: #c77dff;
+  --color-mauve-magic-600: #d399ff;
+  --color-mauve-magic-700: #deb3ff;
+  --color-mauve-magic-800: #e9ccff;
+  --color-mauve-magic-900: #f4e5ff;
+
+  --color-mauve: #e0aaff;
+  --color-mauve-100: #360055;
+  --color-mauve-200: #6b00a9;
+  --color-mauve-300: #a100fe;
+  --color-mauve-400: #c054ff;
+  --color-mauve-500: #e0aaff;
+  --color-mauve-600: #e6baff;
+  --color-mauve-700: #eccbff;
+  --color-mauve-800: #f2dcff;
+  --color-mauve-900: #f9eeff;
+}
+
 body {
-  background-color: #fafafa;
-  color: #18181b;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: #0c0021; /* dark-amethyst-400 */
+  color: #f9eeff; /* mauve-900 */
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+}
+
+/* Custom premium scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0c0021;
+}
+::-webkit-scrollbar-thumb {
+  background: #3c096c;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #5a189a;
+}
+
+/* Custom utility animations */
+@keyframes scrollUp {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-50%);
+  }
+}
+
+.animate-scroll-up {
+  animation: scrollUp 25s linear infinite;
+}
+
+.animate-scroll-up:hover {
+  animation-play-state: paused;
+}
+
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(0.98);
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
