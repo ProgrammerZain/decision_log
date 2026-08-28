@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Search, 
   Plus, 
@@ -6,13 +7,10 @@ import {
   Trash2, 
   Calendar, 
   User, 
-  Tag, 
-  ChevronRight, 
   X, 
   ArrowLeft, 
   Copy, 
   Check, 
-  Grid, 
   Clock, 
   CheckCircle2, 
   AlertCircle, 
@@ -29,7 +27,7 @@ export interface Decision {
   id: string;
   title: string;
   category: string;
-  status: 'Active' | 'Proposed' | 'Superseded' | 'Deprecated';
+  status: 'Active' | 'Proposed' | 'Superseded' | 'Deprecated' | 'Approved';
   impact: 'High' | 'Medium' | 'Low';
   date: string;
   authorName: string;
@@ -40,6 +38,7 @@ export interface Decision {
 
 interface DecisionLogDemoProps {
   onNavigate: (view: 'landing' | 'demo') => void;
+  onDrawerToggle?: (isOpen: boolean) => void;
 }
 
 // Initial default decisions for the demo sandbox
@@ -106,7 +105,7 @@ const DEFAULT_DECISIONS: Decision[] = [
   }
 ];
 
-export const DecisionLogDemo: React.FC<DecisionLogDemoProps> = ({ onNavigate }) => {
+export const DecisionLogDemo: React.FC<DecisionLogDemoProps> = ({ onNavigate, onDrawerToggle }) => {
   // Decisions State - reads from session storage or defaults
   const [decisions, setDecisions] = useState<Decision[]>(() => {
     const stored = sessionStorage.getItem('decision_log_data');
@@ -124,7 +123,6 @@ export const DecisionLogDemo: React.FC<DecisionLogDemoProps> = ({ onNavigate }) 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
-  const [viewMode, setViewMode] = useState<'grid' | 'timeline'>('grid');
 
   // Selected Decision for Drawer View
   const [selectedDecision, setSelectedDecision] = useState<Decision | null>(null);
@@ -150,6 +148,38 @@ export const DecisionLogDemo: React.FC<DecisionLogDemoProps> = ({ onNavigate }) 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  // Freeze background page scroll when modal/drawer is open
+  useEffect(() => {
+    const isAnyOpen = isDetailDrawerOpen || isFormDrawerOpen;
+    if (isAnyOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.height = '100vh';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+    };
+  }, [isDetailDrawerOpen, isFormDrawerOpen]);
+
+  // Notify parent on drawer toggles
+  useEffect(() => {
+    if (onDrawerToggle) {
+      onDrawerToggle(isDetailDrawerOpen || isFormDrawerOpen);
+    }
+  }, [isDetailDrawerOpen, isFormDrawerOpen, onDrawerToggle]);
+
+  // Cleanup drawer state on unmount
+  useEffect(() => {
+    return () => {
+      if (onDrawerToggle) {
+        onDrawerToggle(false);
+      }
+    };
+  }, [onDrawerToggle]);
+
   // Sync to session storage on change
   useEffect(() => {
     sessionStorage.setItem('decision_log_data', JSON.stringify(decisions));
@@ -163,10 +193,11 @@ export const DecisionLogDemo: React.FC<DecisionLogDemoProps> = ({ onNavigate }) 
     }, 3000);
   };
 
-  // Status Style Helpers
+  // Status Style Helpers (Treats 'Approved' the same as 'Active')
   const getStatusIcon = (status: Decision['status']) => {
     switch (status) {
       case 'Active':
+      case 'Approved':
         return <CheckCircle2 className="h-4.5 w-4.5 text-emerald-400" />;
       case 'Proposed':
         return <AlertCircle className="h-4.5 w-4.5 text-sky-400" />;
@@ -180,6 +211,7 @@ export const DecisionLogDemo: React.FC<DecisionLogDemoProps> = ({ onNavigate }) 
   const getStatusStyles = (status: Decision['status']) => {
     switch (status) {
       case 'Active':
+      case 'Approved':
         return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/35 glow-active';
       case 'Proposed':
         return 'bg-sky-500/10 text-sky-400 border-sky-500/35 glow-proposed';
@@ -198,6 +230,22 @@ export const DecisionLogDemo: React.FC<DecisionLogDemoProps> = ({ onNavigate }) 
         return 'bg-amber-500/15 text-amber-400 border-amber-500/30';
       case 'Low':
         return 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30';
+    }
+  };
+
+  // Dynamic Category Colors
+  const getCategoryBgColor = (cat: string) => {
+    switch (cat.toLowerCase()) {
+      case 'frontend':
+        return 'bg-indigo-velvet-500';
+      case 'design system':
+        return 'bg-mauve-magic-500';
+      case 'infrastructure':
+        return 'bg-amber-500';
+      case 'security':
+        return 'bg-rose-500';
+      default:
+        return 'bg-royal-violet-500';
     }
   };
 
@@ -319,32 +367,455 @@ export const DecisionLogDemo: React.FC<DecisionLogDemoProps> = ({ onNavigate }) 
     if (confirm('Reset decisions back to the original mock dataset?')) {
       setDecisions(DEFAULT_DECISIONS);
       sessionStorage.removeItem('decision_log_data');
+      setCategoryFilter('All');
+      setStatusFilter('All');
+      setSearchQuery('');
       showToast('🔄 Reset dashboard to defaults.');
     }
   };
 
-  // Get categories for dropdown list
+  // Get categories for select and chips dynamically
   const categories = Array.from(new Set(decisions.map(d => d.category)));
 
-  // Filter Decisions list based on search query, status and category
+  // Filter Decisions list based on search query (visible only), status and category
   const filteredDecisions = decisions.filter(d => {
+    // Search visible fields only! details is hidden so it is excluded.
     const matchesSearch = 
       d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      d.rationale.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      d.details.toLowerCase().includes(searchQuery.toLowerCase()) ||
       d.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      d.authorName.toLowerCase().includes(searchQuery.toLowerCase());
+      d.status.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      d.authorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      d.authorRole.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      d.date.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      d.rationale.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      d.impact.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesStatus = statusFilter === 'All' || d.status === statusFilter;
+    // Treat 'Approved' status as 'Active'
+    const matchesStatus = statusFilter === 'All' || 
+      (statusFilter === 'Active' 
+        ? (d.status === 'Active' || d.status === 'Approved')
+        : d.status === statusFilter);
+
     const matchesCategory = categoryFilter === 'All' || d.category === categoryFilter;
 
     return matchesSearch && matchesStatus && matchesCategory;
   });
 
-  // Calculate statistics
-  const totalDecs = decisions.length;
-  const activeDecs = decisions.filter(d => d.status === 'Active').length;
-  const highImpactDecs = decisions.filter(d => d.impact === 'High').length;
+  // Calculate statistics based on the active filtered results!
+  const totalDecs = filteredDecisions.length;
+  const activeDecs = filteredDecisions.filter(d => d.status === 'Active' || d.status === 'Approved').length;
+  const highImpactDecs = filteredDecisions.filter(d => d.impact === 'High').length;
+
+  // Aware category counting logic:
+  // Count matches per category based on active search queries and active status filters,
+  // AND limit it by category filter if category filter is active.
+  const getCategoryCount = (catName: string) => {
+    return decisions.filter(d => {
+      const matchesSearch = 
+        d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.status.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.authorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.authorRole.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.date.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.rationale.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.impact.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesStatus = statusFilter === 'All' || 
+        (statusFilter === 'Active' 
+          ? (d.status === 'Active' || d.status === 'Approved')
+          : d.status === statusFilter);
+
+      const matchesCategory = categoryFilter === 'All' || d.category === categoryFilter;
+      const matchesTarget = d.category === catName;
+
+      return matchesSearch && matchesStatus && matchesCategory && matchesTarget;
+    }).length;
+  };
+
+  // Aware counting logic for 'All' category chip
+  const getAllCategoryCount = () => {
+    return decisions.filter(d => {
+      const matchesSearch = 
+        d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.status.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.authorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.authorRole.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.date.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.rationale.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.impact.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesStatus = statusFilter === 'All' || 
+        (statusFilter === 'Active' 
+          ? (d.status === 'Active' || d.status === 'Approved')
+          : d.status === statusFilter);
+
+      const matchesCategory = categoryFilter === 'All' || d.category === categoryFilter;
+
+      return matchesSearch && matchesStatus && matchesCategory;
+    }).length;
+  };
+
+  // Aware status tab counting logic (Treats 'Approved' status as 'Active')
+  const getStatusCount = (statusName: string) => {
+    return decisions.filter(d => {
+      const matchesSearch = 
+        d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.status.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.authorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.authorRole.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.date.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.rationale.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.impact.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesCategory = categoryFilter === 'All' || d.category === categoryFilter;
+      const matchesStatus = statusFilter === 'All' || 
+        (statusFilter === 'Active' 
+          ? (d.status === 'Active' || d.status === 'Approved')
+          : d.status === statusFilter);
+
+      const matchesTarget = statusName === 'Active' 
+        ? (d.status === 'Active' || d.status === 'Approved')
+        : d.status === statusName;
+
+      return matchesSearch && matchesCategory && matchesStatus && matchesTarget;
+    }).length;
+  };
+
+  // Aware counting logic for 'All' status tab
+  const getAllStatusCount = () => {
+    return decisions.filter(d => {
+      const matchesSearch = 
+        d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.status.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.authorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.authorRole.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.date.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.rationale.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.impact.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesCategory = categoryFilter === 'All' || d.category === categoryFilter;
+      const matchesStatus = statusFilter === 'All' || 
+        (statusFilter === 'Active' 
+          ? (d.status === 'Active' || d.status === 'Approved')
+          : d.status === statusFilter);
+
+      return matchesSearch && matchesCategory && matchesStatus;
+    }).length;
+  };
+
+  // Modal Renderers inside React Portal
+  const renderDetailModal = () => {
+    if (!isDetailDrawerOpen || !selectedDecision) return null;
+    return createPortal(
+      <div className="fixed inset-0 z-[100] overflow-hidden flex justify-end">
+        {/* Backdrop Overlay */}
+        <div 
+          className="absolute inset-0 bg-[#030008]/75 backdrop-blur-sm transition-opacity duration-300 animate-fade-in cursor-pointer"
+          onClick={() => setIsDetailDrawerOpen(false)}
+        />
+
+        {/* Panel content: 100vh Right-aligned sliding drawer */}
+        <div className="relative w-full max-w-xl bg-[#0c0021] border-l border-indigo-ink-500/30 shadow-2xl h-screen flex flex-col overflow-hidden animate-slide-in-right z-10 text-left">
+          
+          {/* Drawer Header */}
+          <div className="p-6 border-b border-indigo-ink-500/15 flex items-center justify-between">
+            <div>
+              <span className="text-xs text-mauve-600 font-semibold uppercase tracking-wider">Architecture Decision Record</span>
+              <h2 className="text-lg font-black text-white mt-0.5">Decision Details</h2>
+            </div>
+            <button 
+              onClick={() => setIsDetailDrawerOpen(false)}
+              className="p-1.5 rounded-lg text-mauve-600 hover:text-white hover:bg-indigo-ink-500/20 transition-colors cursor-pointer focus:outline-none"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Drawer Body (Scrolls inside itself) */}
+          <div className="p-6 space-y-6 overflow-y-auto flex-grow text-white">
+            {/* Header Info */}
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2.5">
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold ${getStatusStyles(selectedDecision.status)}`}>
+                  {getStatusIcon(selectedDecision.status)}
+                  {selectedDecision.status}
+                </span>
+                <span className={`inline-flex items-center px-3 py-1 rounded-full border text-xs font-bold ${getImpactBadgeStyles(selectedDecision.impact)}`}>
+                  {selectedDecision.impact} Impact
+                </span>
+                <span className="inline-flex items-center px-3 py-1 rounded-full border border-indigo-ink-500/20 bg-indigo-ink-500/10 text-mauve-magic-500 text-xs font-semibold">
+                  {selectedDecision.category}
+                </span>
+              </div>
+
+              <h1 className="text-xl sm:text-2xl font-black text-white leading-snug">
+                {selectedDecision.title}
+              </h1>
+            </div>
+
+            {/* Meta information grid */}
+            <div className="grid grid-cols-2 gap-4 p-4 rounded-xl border border-indigo-ink-500/15 bg-indigo-ink-100/5">
+              <div className="flex flex-col">
+                <span className="text-[10px] text-mauve-600 font-semibold uppercase tracking-wider">Owner / Author</span>
+                <span className="text-sm font-bold text-white mt-1 flex items-center gap-1">
+                  <User className="h-3.5 w-3.5 text-royal-violet-500" />
+                  {selectedDecision.authorName}
+                </span>
+                <span className="text-[10px] text-mauve-600">{selectedDecision.authorRole}</span>
+              </div>
+              <div className="flex flex-col justify-center">
+                <span className="text-[10px] text-mauve-600 font-semibold uppercase tracking-wider">Date Recorded</span>
+                <span className="text-sm font-bold text-white mt-1 flex items-center gap-1">
+                  <Calendar className="h-3.5 w-3.5 text-royal-violet-500" />
+                  {selectedDecision.date}
+                </span>
+              </div>
+            </div>
+
+            {/* Rationale Section */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-1.5 border-b border-indigo-ink-500/10 pb-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-mauve-magic-500" />
+                What was Decided & Why
+              </h3>
+              <p className="text-xs sm:text-sm text-mauve-900 leading-relaxed font-semibold">
+                {selectedDecision.rationale}
+              </p>
+            </div>
+
+            {/* Details Section */}
+            {selectedDecision.details && (
+              <div className="space-y-2">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-1.5 border-b border-indigo-ink-500/10 pb-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-mauve-magic-500" />
+                  Detailed Context & Alternatives Considered
+                </h3>
+                <p className="text-xs sm:text-sm text-mauve-600 leading-relaxed whitespace-pre-wrap">
+                  {selectedDecision.details}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Drawer Footer Actions: No ID field here */}
+          <div className="p-4 border-t border-indigo-ink-500/15 bg-dark-amethyst-500/80 flex items-center justify-end gap-3">
+
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                onClick={() => handleOpenEdit(selectedDecision)}
+                className="flex items-center gap-1.5"
+              >
+                <Edit2 className="h-3.5 w-3.5" /> Edit Log
+              </Button>
+              <button 
+                onClick={() => handleDeleteDecision(selectedDecision.id)}
+                className="px-4 py-2 bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white transition-all text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer focus:outline-none"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Delete
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>,
+      document.body
+    );
+  };
+
+  const renderFormModal = () => {
+    if (!isFormDrawerOpen) return null;
+    return createPortal(
+      <div className="fixed inset-0 z-[100] overflow-hidden flex justify-end">
+        {/* Backdrop Overlay */}
+        <div 
+          className="absolute inset-0 bg-[#030008]/75 backdrop-blur-sm transition-opacity duration-300 animate-fade-in cursor-pointer"
+          onClick={() => setIsFormDrawerOpen(false)}
+        />
+
+        {/* Panel content: 100vh Right-aligned sliding drawer */}
+        <div className="relative w-full max-w-xl bg-[#0c0021] border-l border-indigo-ink-500/30 shadow-2xl h-full flex flex-col overflow-hidden animate-slide-in-right z-10 text-left">
+          
+          {/* Drawer Header */}
+          <div className="p-6 border-b border-indigo-ink-500/15 flex items-center justify-between">
+            <div>
+              <span className="text-xs text-mauve-600 font-semibold uppercase tracking-wider">Decision Records Form</span>
+              <h2 className="text-lg font-black text-white mt-0.5">
+                {formMode === 'create' ? 'Log New Decision' : 'Edit Decision Record'}
+              </h2>
+            </div>
+            <button 
+              onClick={() => setIsFormDrawerOpen(false)}
+              className="p-1.5 rounded-lg text-mauve-600 hover:text-white hover:bg-indigo-ink-500/20 transition-colors cursor-pointer focus:outline-none"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Drawer Body Form: Form scrolls within itself, keeps buttons stuck directly beneath inputs */}
+          <form onSubmit={handleSaveDecision} className="flex flex-col flex-grow overflow-hidden">
+            <div className="p-6 space-y-4 overflow-y-auto flex-grow text-white">
+              {/* Form Fields */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] text-white font-bold uppercase tracking-wider">
+                  What was decided (Title) *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Migrate primary backend database to PostgreSQL"
+                  value={formTitle}
+                  onChange={(e) => setFormTitle(e.target.value)}
+                  className="w-full px-4 py-2 bg-violet-midnight-500/30 border border-indigo-ink-500/30 text-white placeholder-mauve-600/40 rounded-xl focus:outline-none focus:border-royal-violet-500 focus:ring-1 focus:ring-royal-violet-500 text-sm transition-all"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] text-white font-bold uppercase tracking-wider">
+                    Category
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Frontend, Architecture, Security"
+                    value={formCategory}
+                    onChange={(e) => setFormCategory(e.target.value)}
+                    className="w-full px-4 py-2 bg-violet-midnight-500/30 border border-indigo-ink-500/30 text-white placeholder-mauve-600/40 rounded-xl focus:outline-none focus:border-royal-violet-500 focus:ring-1 focus:ring-royal-violet-500 text-xs transition-all"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] text-white font-bold uppercase tracking-wider">
+                    Decision Date
+                  </label>
+                  <input
+                    type="date"
+                    value={formDate}
+                    onChange={(e) => setFormDate(e.target.value)}
+                    className="w-full px-4 py-2 bg-violet-midnight-500/30 border border-indigo-ink-500/30 text-white rounded-xl focus:outline-none focus:border-royal-violet-500 focus:ring-1 focus:ring-royal-violet-500 text-xs transition-all cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] text-white font-bold uppercase tracking-wider">
+                    Status (Active State)
+                  </label>
+                  <select
+                    value={formStatus}
+                    onChange={(e) => setFormStatus(e.target.value as Decision['status'])}
+                    className="w-full px-3 py-2 bg-violet-midnight-500/30 border border-indigo-ink-500/30 text-white rounded-xl focus:outline-none focus:border-royal-violet-500 focus:ring-1 focus:ring-royal-violet-500 text-xs transition-all cursor-pointer"
+                  >
+                    <option value="Active">Active / Approved</option>
+                    <option value="Proposed">Proposed</option>
+                    <option value="Superseded">Superseded</option>
+                    <option value="Deprecated">Deprecated</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] text-white font-bold uppercase tracking-wider">
+                    Impact Level
+                  </label>
+                  <select
+                    value={formImpact}
+                    onChange={(e) => setFormImpact(e.target.value as Decision['impact'])}
+                    className="w-full px-3 py-2 bg-violet-midnight-500/30 border border-indigo-ink-500/30 text-white rounded-xl focus:outline-none focus:border-royal-violet-500 focus:ring-1 focus:ring-royal-violet-500 text-xs transition-all cursor-pointer"
+                  >
+                    <option value="High">High</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] text-white font-bold uppercase tracking-wider">
+                    Author / Owner Name
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Alex Rivera"
+                    value={formAuthorName}
+                    onChange={(e) => setFormAuthorName(e.target.value)}
+                    className="w-full px-4 py-2 bg-violet-midnight-500/30 border border-indigo-ink-500/30 text-white placeholder-mauve-600/40 rounded-xl focus:outline-none focus:border-royal-violet-500 focus:ring-1 focus:ring-royal-violet-500 text-xs transition-all"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] text-white font-bold uppercase tracking-wider">
+                    Author / Owner Role
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Infrastructure Lead"
+                    value={formAuthorRole}
+                    onChange={(e) => setFormAuthorRole(e.target.value)}
+                    className="w-full px-4 py-2 bg-violet-midnight-500/30 border border-indigo-ink-500/30 text-white placeholder-mauve-600/40 rounded-xl focus:outline-none focus:border-royal-violet-500 focus:ring-1 focus:ring-royal-violet-500 text-xs transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] text-white font-bold uppercase tracking-wider">
+                  Why it was decided (Rationale) *
+                </label>
+                <textarea
+                  required
+                  rows={2}
+                  placeholder="Summarize the core reason, motivations, and the problem solved by this decision."
+                  value={formRationale}
+                  onChange={(e) => setFormRationale(e.target.value)}
+                  className="w-full px-4 py-2 bg-violet-midnight-500/30 border border-indigo-ink-500/30 text-white placeholder-mauve-600/40 rounded-xl focus:outline-none focus:border-royal-violet-500 focus:ring-1 focus:ring-royal-violet-500 text-xs transition-all resize-none"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] text-white font-bold uppercase tracking-wider">
+                  Detailed Context & Alternatives (Optional)
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Provide additional architectural notes, technical references, or options that were rejected and why."
+                  value={formDetails}
+                  onChange={(e) => setFormDetails(e.target.value)}
+                  className="w-full px-4 py-2 bg-violet-midnight-500/30 border border-indigo-ink-500/30 text-white placeholder-mauve-600/40 rounded-xl focus:outline-none focus:border-royal-violet-500 focus:ring-1 focus:ring-royal-violet-500 text-xs transition-all resize-y"
+                />
+              </div>
+            </div>
+
+            {/* Form Footer Actions (Sitting directly below inputs, at bottom of drawer view) */}
+            <div className="p-4 border-t border-indigo-ink-500/15 bg-dark-amethyst-500/80 flex items-center justify-end gap-3 mt-auto">
+              <Button 
+                type="button"
+                variant="secondary" 
+                size="sm" 
+                onClick={() => setIsFormDrawerOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                variant="primary" 
+                size="sm"
+              >
+                {formMode === 'create' ? 'Save Record' : 'Save Changes'}
+              </Button>
+            </div>
+          </form>
+
+        </div>
+      </div>,
+      document.body
+    );
+  };
 
   return (
     <div className="min-h-screen bg-dark-amethyst-400 text-mauve-900 pt-6 pb-20 relative px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto font-sans antialiased">
@@ -430,7 +901,7 @@ export const DecisionLogDemo: React.FC<DecisionLogDemoProps> = ({ onNavigate }) 
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-mauve-600" />
           <input
             type="text"
-            placeholder="Search decisions by title, author, key rationale..."
+            placeholder="Search decisions by visible title, author, key rationale..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-violet-midnight-500/40 border border-indigo-ink-500/30 text-white placeholder-mauve-600/50 rounded-xl focus:outline-none focus:border-royal-violet-500 focus:ring-1 focus:ring-royal-violet-500 text-sm transition-all"
@@ -447,49 +918,73 @@ export const DecisionLogDemo: React.FC<DecisionLogDemoProps> = ({ onNavigate }) 
 
         {/* Toolbar Controls */}
         <div className="flex flex-wrap items-center justify-between sm:justify-start gap-4">
-          {/* Category Filter */}
+          {/* Category Dropdown Selection Option */}
           <div className="flex items-center gap-2">
-            <span className="text-xs text-mauve-600 font-medium">Category:</span>
+            <span className="text-xs text-mauve-600 font-medium">Category Option:</span>
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
               className="bg-violet-midnight-500/60 border border-indigo-ink-500/30 text-white text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-royal-violet-500 focus:ring-1 focus:ring-royal-violet-500 cursor-pointer"
             >
               <option value="All">All Categories</option>
-              <option value="Frontend">Frontend</option>
-              <option value="Infrastructure">Infrastructure</option>
-              <option value="Security">Security</option>
-              <option value="Design System">Design System</option>
-              {categories.filter(c => !['Frontend', 'Infrastructure', 'Security', 'Design System'].includes(c)).map(cat => (
+              {categories.map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
           </div>
-
-          {/* View Mode Toggle */}
-          <div className="flex items-center bg-violet-midnight-500/50 border border-indigo-ink-500/30 rounded-lg p-0.5">
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-md transition-colors cursor-pointer focus:outline-none ${viewMode === 'grid' ? 'bg-royal-violet-600 text-white' : 'text-mauve-600 hover:text-white'}`}
-              title="Grid View"
-            >
-              <Grid className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => setViewMode('timeline')}
-              className={`p-1.5 rounded-md transition-colors cursor-pointer focus:outline-none ${viewMode === 'timeline' ? 'bg-royal-violet-600 text-white' : 'text-mauve-600 hover:text-white'}`}
-              title="Timeline View"
-            >
-              <ChevronRight className="h-4 w-4 rotate-90" />
-            </button>
-          </div>
         </div>
       </div>
 
-      {/* Status Filter Tabs */}
+      {/* Dynamic Category Chips - aware of search queries, status filters, and active category options */}
+      <div className="flex flex-wrap items-center gap-2 mb-4 text-left">
+        <span className="text-xs text-mauve-600 font-semibold mr-1">Category Chips:</span>
+        <button
+          onClick={() => setCategoryFilter('All')}
+          className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer focus:outline-none ${
+            categoryFilter === 'All'
+              ? 'bg-royal-violet-600 text-white border-royal-violet-500 shadow-md'
+              : 'bg-dark-amethyst-500/50 text-mauve-600 border-indigo-ink-500/15 hover:text-white'
+          }`}
+        >
+          All ({getAllCategoryCount()})
+        </button>
+        {categories.map(cat => {
+          const count = getCategoryCount(cat);
+          const isSelected = categoryFilter === cat;
+          return (
+            <button
+              key={cat}
+              onClick={() => setCategoryFilter(isSelected ? 'All' : cat)}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer focus:outline-none ${
+                isSelected
+                  ? 'bg-royal-violet-600 text-white border-royal-violet-500 shadow-md'
+                  : 'bg-dark-amethyst-500/50 text-mauve-600 border-indigo-ink-500/15 hover:text-white font-medium'
+              }`}
+            >
+              {cat} ({count})
+            </button>
+          );
+        })}
+
+        {/* Clear/Filter applied indicators */}
+        {categoryFilter !== 'All' && (
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-royal-violet-600/20 text-mauve-magic-500 border border-royal-violet-500/30">
+            Active Filter: {categoryFilter}
+            <button 
+              onClick={() => setCategoryFilter('All')}
+              className="hover:text-white cursor-pointer ml-1"
+              title="Clear Category Filter"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Status Filter Tabs - fully dynamic counts */}
       <div className="flex overflow-x-auto gap-2 pb-3 mb-6 scrollbar-none border-b border-indigo-ink-500/10">
         {['All', 'Active', 'Proposed', 'Superseded', 'Deprecated'].map(status => {
-          const count = status === 'All' ? decisions.length : decisions.filter(d => d.status === status).length;
+          const count = status === 'All' ? getAllStatusCount() : getStatusCount(status);
           return (
             <button
               key={status}
@@ -520,66 +1015,8 @@ export const DecisionLogDemo: React.FC<DecisionLogDemoProps> = ({ onNavigate }) 
         </div>
       )}
 
-      {/* Decisions List Views */}
-      {filteredDecisions.length > 0 && viewMode === 'grid' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
-          {filteredDecisions.map((dec) => (
-            <div
-              key={dec.id}
-              onClick={() => {
-                setSelectedDecision(dec);
-                setIsDetailDrawerOpen(true);
-              }}
-              className="group cursor-pointer text-left relative overflow-hidden rounded-2xl border border-indigo-ink-500/25 bg-gradient-to-b from-violet-midnight-500/40 to-dark-amethyst-500/60 p-6 shadow-md transition-all duration-300 hover:border-royal-violet-500/50 hover:shadow-lg hover:shadow-royal-violet-500/5 hover:-translate-y-0.5"
-            >
-              {/* Glowing Line for Impact */}
-              <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${
-                dec.impact === 'High' ? 'from-rose-500 to-amber-500' :
-                dec.impact === 'Medium' ? 'from-amber-500 to-emerald-500' :
-                'from-emerald-500 to-sky-500'
-              }`} />
-
-              <div className="flex items-center justify-between gap-3 text-xs mb-3">
-                <span className="text-mauve-600 flex items-center gap-1">
-                  <Tag className="h-3 w-3 text-royal-violet-500" />
-                  {dec.category}
-                </span>
-                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-semibold tracking-wide ${getStatusStyles(dec.status)}`}>
-                  <span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse-slow" />
-                  {dec.status}
-                </span>
-              </div>
-
-              <h3 className="font-extrabold text-white text-base group-hover:text-mauve-magic-500 transition-colors duration-150 line-clamp-1 mb-2.5">
-                {renderHighlightedText(dec.title, searchQuery)}
-              </h3>
-
-              <p className="text-xs text-mauve-600 line-clamp-2 leading-relaxed mb-4 flex-grow">
-                {renderHighlightedText(dec.rationale, searchQuery)}
-              </p>
-
-              <div className="flex items-center justify-between gap-4 pt-3.5 border-t border-indigo-ink-500/10 text-xs">
-                <div className="flex items-center gap-2">
-                  <div className="h-6 w-6 rounded-full bg-gradient-to-r from-royal-violet-600 to-mauve-magic-500 flex items-center justify-center text-[10px] font-bold text-white shadow-sm ring-1 ring-royal-violet-500/30">
-                    {dec.authorName.split(' ').map(n => n[0]).join('')}
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-xs text-mauve-900 font-medium leading-none">{dec.authorName}</span>
-                    <span className="text-[9px] text-mauve-600 leading-none mt-0.5">{dec.authorRole}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 text-mauve-600">
-                  <Calendar className="h-3 w-3" />
-                  <span>{dec.date}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {filteredDecisions.length > 0 && viewMode === 'timeline' && (
+      {/* Minimalist Timeline view */}
+      {filteredDecisions.length > 0 && (
         <div className="relative border-l border-indigo-ink-500/30 ml-4 sm:ml-8 pl-6 sm:pl-10 space-y-8 animate-fade-in text-left">
           {filteredDecisions.map((dec) => (
             <div key={dec.id} className="relative group">
@@ -589,53 +1026,58 @@ export const DecisionLogDemo: React.FC<DecisionLogDemoProps> = ({ onNavigate }) 
                   setSelectedDecision(dec);
                   setIsDetailDrawerOpen(true);
                 }}
-                className={`absolute -left-[31px] sm:-left-[47px] top-1 h-5 w-5 sm:h-6 sm:w-6 rounded-full border-2 bg-[#0c0021] flex items-center justify-center shadow-lg transition-transform duration-200 hover:scale-125 cursor-pointer ${
-                  dec.status === 'Active' ? 'border-emerald-500' :
+                className={`absolute -left-[31px] sm:-left-[47px] top-1.5 h-5 w-5 sm:h-6 sm:w-6 rounded-full border-2 bg-[#0c0021] flex items-center justify-center shadow-lg transition-transform duration-200 hover:scale-125 cursor-pointer z-10 ${
+                  (dec.status === 'Active' || dec.status === 'Approved') ? 'border-emerald-500' :
                   dec.status === 'Proposed' ? 'border-sky-500' :
                   dec.status === 'Superseded' ? 'border-amber-500' :
                   'border-rose-500'
                 }`}
               >
                 <div className={`h-1.5 w-1.5 sm:h-2.5 sm:w-2.5 rounded-full ${
-                  dec.status === 'Active' ? 'bg-emerald-500 animate-pulse' :
+                  (dec.status === 'Active' || dec.status === 'Approved') ? 'bg-emerald-500 animate-pulse' :
                   dec.status === 'Proposed' ? 'bg-sky-500' :
                   dec.status === 'Superseded' ? 'bg-amber-500' :
                   'bg-rose-500'
                 }`} />
               </div>
 
-              {/* Card content */}
+              {/* Card content with Category Color Bar at the Top */}
               <div 
                 onClick={() => {
                   setSelectedDecision(dec);
                   setIsDetailDrawerOpen(true);
                 }}
-                className="cursor-pointer border border-indigo-ink-500/20 bg-gradient-to-b from-violet-midnight-500/30 to-dark-amethyst-500/50 p-5 rounded-2xl hover:border-royal-violet-500/40 hover:shadow-md hover:shadow-royal-violet-500/5 transition-all duration-300"
+                className="cursor-pointer border border-indigo-ink-500/20 bg-gradient-to-b from-violet-midnight-500/30 to-dark-amethyst-500/50 rounded-2xl hover:border-royal-violet-500/40 hover:shadow-md hover:shadow-royal-violet-500/5 transition-all duration-300 relative overflow-hidden"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-mauve-600 font-semibold tracking-wider uppercase">{dec.date}</span>
-                    <span className="h-1.5 w-1.5 rounded-full bg-indigo-ink-500" />
-                    <span className="text-xs text-mauve-900 font-medium">{dec.category}</span>
+                {/* Same color line as the category color at the top */}
+                <div className={`h-1.5 w-full ${getCategoryBgColor(dec.category)}`} />
+
+                <div className="p-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-mauve-600 font-semibold tracking-wider uppercase">{dec.date}</span>
+                      <span className="h-1.5 w-1.5 rounded-full bg-indigo-ink-500" />
+                      <span className="text-xs text-mauve-900 font-medium">{dec.category}</span>
+                    </div>
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[10px] font-semibold w-fit ${getStatusStyles(dec.status)}`}>
+                      {dec.status}
+                    </span>
                   </div>
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[10px] font-semibold w-fit ${getStatusStyles(dec.status)}`}>
-                    {dec.status}
-                  </span>
-                </div>
 
-                <h3 className="font-extrabold text-white text-base group-hover:text-mauve-magic-500 transition-colors duration-150 mb-1.5">
-                  {renderHighlightedText(dec.title, searchQuery)}
-                </h3>
+                  <h3 className="font-extrabold text-white text-base group-hover:text-mauve-magic-500 transition-colors duration-150 mb-1.5">
+                    {renderHighlightedText(dec.title, searchQuery)}
+                  </h3>
 
-                <p className="text-xs text-mauve-600 leading-relaxed max-w-3xl mb-3">
-                  {renderHighlightedText(dec.rationale, searchQuery)}
-                </p>
+                  <p className="text-xs text-mauve-600 leading-relaxed max-w-3xl mb-3">
+                    {renderHighlightedText(dec.rationale, searchQuery)}
+                  </p>
 
-                <div className="flex items-center justify-between text-xs pt-3.5 border-t border-indigo-ink-500/10">
-                  <span className="text-mauve-600">Logged by <strong className="text-white">{dec.authorName}</strong> ({dec.authorRole})</span>
-                  <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold border ${getImpactBadgeStyles(dec.impact)}`}>
-                    {dec.impact} Impact
-                  </span>
+                  <div className="flex items-center justify-between text-xs pt-3.5 border-t border-indigo-ink-500/10">
+                    <span className="text-mauve-600">Logged by <strong className="text-white">{dec.authorName}</strong> ({dec.authorRole})</span>
+                    <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold border ${getImpactBadgeStyles(dec.impact)}`}>
+                      {dec.impact} Impact
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -643,322 +1085,9 @@ export const DecisionLogDemo: React.FC<DecisionLogDemoProps> = ({ onNavigate }) 
         </div>
       )}
 
-      {/* ======================================================== */}
-      {/* 1. SLIDE-OVER DRAWER: DETAILED VIEW                       */}
-      {/* ======================================================== */}
-      {isDetailDrawerOpen && selectedDecision && (
-        <div className="fixed inset-0 z-50 overflow-hidden flex justify-end">
-          {/* Backdrop Overlay */}
-          <div 
-            className="absolute inset-0 bg-[#030008]/75 backdrop-blur-sm transition-opacity duration-300 animate-fade-in"
-            onClick={() => setIsDetailDrawerOpen(false)}
-          />
-
-          {/* Panel content */}
-          <div className="relative w-full max-w-xl bg-gradient-to-b from-dark-amethyst-500 to-[#10002b] border-l border-indigo-ink-500/30 shadow-2xl h-full flex flex-col justify-between overflow-y-auto animate-slide-in-right z-10 text-left">
-            
-            {/* Drawer Header */}
-            <div className="p-6 border-b border-indigo-ink-500/15 flex items-center justify-between">
-              <div>
-                <span className="text-xs text-mauve-600 font-semibold uppercase tracking-wider">Architecture Decision Record</span>
-                <h2 className="text-lg font-black text-white mt-0.5">Decision Details</h2>
-              </div>
-              <button 
-                onClick={() => setIsDetailDrawerOpen(false)}
-                className="p-1.5 rounded-lg text-mauve-600 hover:text-white hover:bg-indigo-ink-500/20 transition-colors cursor-pointer focus:outline-none"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Drawer Body */}
-            <div className="p-6 space-y-6 flex-grow">
-              {/* Header Info */}
-              <div className="space-y-4">
-                <div className="flex flex-wrap gap-2.5">
-                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold ${getStatusStyles(selectedDecision.status)}`}>
-                    {getStatusIcon(selectedDecision.status)}
-                    {selectedDecision.status}
-                  </span>
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full border text-xs font-bold ${getImpactBadgeStyles(selectedDecision.impact)}`}>
-                    {selectedDecision.impact} Impact
-                  </span>
-                  <span className="inline-flex items-center px-3 py-1 rounded-full border border-indigo-ink-500/20 bg-indigo-ink-500/10 text-mauve-magic-500 text-xs font-semibold">
-                    {selectedDecision.category}
-                  </span>
-                </div>
-
-                <h1 className="text-xl sm:text-2xl font-black text-white leading-snug">
-                  {selectedDecision.title}
-                </h1>
-              </div>
-
-              {/* Meta information grid */}
-              <div className="grid grid-cols-2 gap-4 p-4 rounded-xl border border-indigo-ink-500/15 bg-indigo-ink-100/5">
-                <div className="flex flex-col">
-                  <span className="text-[10px] text-mauve-600 font-semibold uppercase tracking-wider">Owner / Author</span>
-                  <span className="text-sm font-bold text-white mt-1 flex items-center gap-1">
-                    <User className="h-3.5 w-3.5 text-royal-violet-500" />
-                    {selectedDecision.authorName}
-                  </span>
-                  <span className="text-[10px] text-mauve-600">{selectedDecision.authorRole}</span>
-                </div>
-                <div className="flex flex-col justify-center">
-                  <span className="text-[10px] text-mauve-600 font-semibold uppercase tracking-wider">Date Recorded</span>
-                  <span className="text-sm font-bold text-white mt-1 flex items-center gap-1">
-                    <Calendar className="h-3.5 w-3.5 text-royal-violet-500" />
-                    {selectedDecision.date}
-                  </span>
-                </div>
-              </div>
-
-              {/* Rationale Section */}
-              <div className="space-y-2">
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-1.5 border-b border-indigo-ink-500/10 pb-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-mauve-magic-500" />
-                  What was Decided & Why
-                </h3>
-                <p className="text-xs sm:text-sm text-mauve-900 leading-relaxed font-semibold">
-                  {selectedDecision.rationale}
-                </p>
-              </div>
-
-              {/* Details Section */}
-              {selectedDecision.details && (
-                <div className="space-y-2">
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-1.5 border-b border-indigo-ink-500/10 pb-1.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-mauve-magic-500" />
-                    Detailed Context & Alternatives Considered
-                  </h3>
-                  <p className="text-xs sm:text-sm text-mauve-600 leading-relaxed whitespace-pre-wrap">
-                    {selectedDecision.details}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Drawer Footer Actions */}
-            <div className="p-6 border-t border-indigo-ink-500/15 bg-dark-amethyst-500/80 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleCopyLink(selectedDecision)}
-                  className="flex items-center justify-center p-2.5 rounded-xl border border-indigo-ink-500/30 text-mauve-600 hover:text-white hover:bg-indigo-ink-500/20 transition-all cursor-pointer focus:outline-none"
-                  title="Copy Details to Clipboard"
-                >
-                  {copiedId === selectedDecision.id ? <Check className="h-4.5 w-4.5 text-emerald-400" /> : <Copy className="h-4.5 w-4.5" />}
-                </button>
-                <span className="text-[10px] text-mauve-600">ID: {selectedDecision.id}</span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button 
-                  variant="secondary" 
-                  size="sm" 
-                  onClick={() => handleOpenEdit(selectedDecision)}
-                  className="flex items-center gap-1.5"
-                >
-                  <Edit2 className="h-3.5 w-3.5" /> Edit Log
-                </Button>
-                <button 
-                  onClick={() => handleDeleteDecision(selectedDecision.id)}
-                  className="px-4 py-2 bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white transition-all text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer focus:outline-none"
-                >
-                  <Trash2 className="h-3.5 w-3.5" /> Delete
-                </button>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      )}
-
-      {/* ======================================================== */}
-      {/* 2. SLIDE-OVER DRAWER: CREATE / EDIT FORM                  */}
-      {/* ======================================================== */}
-      {isFormDrawerOpen && (
-        <div className="fixed inset-0 z-50 overflow-hidden flex justify-end">
-          {/* Backdrop Overlay */}
-          <div 
-            className="absolute inset-0 bg-[#030008]/75 backdrop-blur-sm transition-opacity duration-300 animate-fade-in"
-            onClick={() => setIsFormDrawerOpen(false)}
-          />
-
-          {/* Panel content */}
-          <div className="relative w-full max-w-xl bg-gradient-to-b from-dark-amethyst-500 to-[#10002b] border-l border-indigo-ink-500/30 shadow-2xl h-full flex flex-col justify-between animate-slide-in-right z-10 text-left">
-            
-            {/* Drawer Header */}
-            <div className="p-6 border-b border-indigo-ink-500/15 flex items-center justify-between">
-              <div>
-                <span className="text-xs text-mauve-600 font-semibold uppercase tracking-wider">Decision Records Form</span>
-                <h2 className="text-lg font-black text-white mt-0.5">
-                  {formMode === 'create' ? 'Log New Decision' : 'Edit Decision Record'}
-                </h2>
-              </div>
-              <button 
-                onClick={() => setIsFormDrawerOpen(false)}
-                className="p-1.5 rounded-lg text-mauve-600 hover:text-white hover:bg-indigo-ink-500/20 transition-colors cursor-pointer focus:outline-none"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Drawer Body Form */}
-            <form onSubmit={handleSaveDecision} className="flex-grow flex flex-col justify-between overflow-y-auto">
-              <div className="p-6 space-y-5">
-                {/* Form Fields */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs text-white font-bold uppercase tracking-wider">
-                    What was decided (Title) *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Migrate primary backend database to PostgreSQL"
-                    value={formTitle}
-                    onChange={(e) => setFormTitle(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-violet-midnight-500/30 border border-indigo-ink-500/30 text-white placeholder-mauve-600/40 rounded-xl focus:outline-none focus:border-royal-violet-500 focus:ring-1 focus:ring-royal-violet-500 text-sm transition-all"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs text-white font-bold uppercase tracking-wider">
-                      Category
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Frontend, Architecture, Security"
-                      value={formCategory}
-                      onChange={(e) => setFormCategory(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-violet-midnight-500/30 border border-indigo-ink-500/30 text-white placeholder-mauve-600/40 rounded-xl focus:outline-none focus:border-royal-violet-500 focus:ring-1 focus:ring-royal-violet-500 text-xs transition-all"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs text-white font-bold uppercase tracking-wider">
-                      Decision Date
-                    </label>
-                    <input
-                      type="date"
-                      value={formDate}
-                      onChange={(e) => setFormDate(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-violet-midnight-500/30 border border-indigo-ink-500/30 text-white rounded-xl focus:outline-none focus:border-royal-violet-500 focus:ring-1 focus:ring-royal-violet-500 text-xs transition-all cursor-pointer"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs text-white font-bold uppercase tracking-wider">
-                      Status (Active State)
-                    </label>
-                    <select
-                      value={formStatus}
-                      onChange={(e) => setFormStatus(e.target.value as Decision['status'])}
-                      className="w-full px-3 py-2.5 bg-violet-midnight-500/30 border border-indigo-ink-500/30 text-white rounded-xl focus:outline-none focus:border-royal-violet-500 focus:ring-1 focus:ring-royal-violet-500 text-xs transition-all cursor-pointer"
-                    >
-                      <option value="Active">Active / Approved</option>
-                      <option value="Proposed">Proposed</option>
-                      <option value="Superseded">Superseded</option>
-                      <option value="Deprecated">Deprecated</option>
-                    </select>
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs text-white font-bold uppercase tracking-wider">
-                      Impact Level
-                    </label>
-                    <select
-                      value={formImpact}
-                      onChange={(e) => setFormImpact(e.target.value as Decision['impact'])}
-                      className="w-full px-3 py-2.5 bg-violet-midnight-500/30 border border-indigo-ink-500/30 text-white rounded-xl focus:outline-none focus:border-royal-violet-500 focus:ring-1 focus:ring-royal-violet-500 text-xs transition-all cursor-pointer"
-                    >
-                      <option value="High">High</option>
-                      <option value="Medium">Medium</option>
-                      <option value="Low">Low</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs text-white font-bold uppercase tracking-wider">
-                      Author / Owner Name
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Alex Rivera"
-                      value={formAuthorName}
-                      onChange={(e) => setFormAuthorName(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-violet-midnight-500/30 border border-indigo-ink-500/30 text-white placeholder-mauve-600/40 rounded-xl focus:outline-none focus:border-royal-violet-500 focus:ring-1 focus:ring-royal-violet-500 text-xs transition-all"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs text-white font-bold uppercase tracking-wider">
-                      Author / Owner Role
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Infrastructure Lead"
-                      value={formAuthorRole}
-                      onChange={(e) => setFormAuthorRole(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-violet-midnight-500/30 border border-indigo-ink-500/30 text-white placeholder-mauve-600/40 rounded-xl focus:outline-none focus:border-royal-violet-500 focus:ring-1 focus:ring-royal-violet-500 text-xs transition-all"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs text-white font-bold uppercase tracking-wider">
-                    Why it was decided (Rationale) *
-                  </label>
-                  <textarea
-                    required
-                    rows={3}
-                    placeholder="Summarize the core reason, motivations, and the problem solved by this decision."
-                    value={formRationale}
-                    onChange={(e) => setFormRationale(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-violet-midnight-500/30 border border-indigo-ink-500/30 text-white placeholder-mauve-600/40 rounded-xl focus:outline-none focus:border-royal-violet-500 focus:ring-1 focus:ring-royal-violet-500 text-xs transition-all resize-none"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs text-white font-bold uppercase tracking-wider">
-                    Detailed Context & Alternatives (Optional)
-                  </label>
-                  <textarea
-                    rows={4}
-                    placeholder="Provide additional architectural notes, technical references, or options that were rejected and why."
-                    value={formDetails}
-                    onChange={(e) => setFormDetails(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-violet-midnight-500/30 border border-indigo-ink-500/30 text-white placeholder-mauve-600/40 rounded-xl focus:outline-none focus:border-royal-violet-500 focus:ring-1 focus:ring-royal-violet-500 text-xs transition-all resize-y"
-                  />
-                </div>
-              </div>
-
-              {/* Form Footer Actions */}
-              <div className="p-6 border-t border-indigo-ink-500/15 bg-dark-amethyst-500/80 flex items-center justify-end gap-3.5">
-                <Button 
-                  type="button"
-                  variant="secondary" 
-                  size="md" 
-                  onClick={() => setIsFormDrawerOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  variant="primary" 
-                  size="md"
-                >
-                  {formMode === 'create' ? 'Save Record' : 'Save Changes'}
-                </Button>
-              </div>
-            </form>
-
-          </div>
-        </div>
-      )}
+      {/* Portaled Drawers */}
+      {renderDetailModal()}
+      {renderFormModal()}
 
     </div>
   );

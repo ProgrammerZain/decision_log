@@ -15,6 +15,7 @@ import {
 
 function App() {
   const [currentView, setCurrentView] = useState<'landing' | 'demo'>('landing');
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // Smooth scroll to top when changing views
   useEffect(() => {
@@ -25,7 +26,7 @@ function App() {
     <div className="min-h-screen bg-dark-amethyst-400 text-mauve-900 flex flex-col relative font-sans antialiased">
       {/* Navigation Headers */}
       <Navbar currentView={currentView} onNavigate={setCurrentView} />
-      <PromoBanner />
+      {currentView === 'landing' && <PromoBanner />}
       
       {/* Main Landing Sections */}
       <main className="flex-grow">
@@ -38,7 +39,7 @@ function App() {
           </div>
         ) : (
           <div className="animate-fade-in-scale">
-            <DecisionLogDemo onNavigate={setCurrentView} />
+            <DecisionLogDemo onNavigate={setCurrentView} onDrawerToggle={setIsDrawerOpen} />
           </div>
         )}
       </main>
@@ -47,8 +48,8 @@ function App() {
       {currentView === 'landing' && <Footer />}
       
       {/* Floating Bottom Right Interactive Widgets */}
-      <Chatbot />
-      <ScrollToTop />
+      {currentView === 'landing' && <Chatbot />}
+      <ScrollToTop isHidden={isDrawerOpen} />
     </div>
   );
 }
