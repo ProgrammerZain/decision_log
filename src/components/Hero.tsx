@@ -72,7 +72,7 @@ export const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
             </div>
             
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white mb-6 leading-[1.1]">
-              Document the <span className="bg-gradient-to-r from-mauve-magic-500 via-mauve-600 to-royal-violet-700 bg-clip-text text-transparent">"Why"</span> of your decisions.
+              Document the <span className="text-royal-violet-500">"Why"</span> of your decisions.
             </h1>
             
             <p className="text-base sm:text-lg text-mauve-600 mb-8 max-w-xl leading-relaxed">
@@ -83,6 +83,7 @@ export const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
             <div className="flex flex-col gap-3.5 mb-8 max-w-lg">
               <form onSubmit={handleStartTrial} className="flex flex-col sm:flex-row gap-2.5">
                 <input
+                  id="trial-email-input"
                   type="email"
                   placeholder="Enter your work email"
                   value={email}
@@ -122,7 +123,7 @@ export const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
           </div>
 
           {/* Column 2: Scrolling list of cards */}
-          <div className="lg:col-span-6 relative h-[480px] w-full flex items-center justify-center overflow-hidden rounded-3xl border border-indigo-ink-500/10 bg-gradient-to-b from-indigo-ink-100/5 to-violet-midnight-200/5 backdrop-blur-[2px]">
+          <div className="lg:col-span-6 relative h-[480px] w-full flex items-center justify-center overflow-hidden rounded-3xl border border-indigo-ink-500/10 bg-indigo-ink-100/5 backdrop-blur-[2px]">
             {/* Overlay gradients for fade effect on top/bottom */}
             <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-[#0c0021] to-transparent z-10 pointer-events-none" />
             <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#0c0021] to-transparent z-10 pointer-events-none" />

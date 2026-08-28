@@ -9,8 +9,6 @@ import {
   User, 
   X, 
   ArrowLeft, 
-  Copy, 
-  Check, 
   Clock, 
   CheckCircle2, 
   AlertCircle, 
@@ -146,7 +144,6 @@ export const DecisionLogDemo: React.FC<DecisionLogDemoProps> = ({ onNavigate, on
 
   // Toast Notification State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Freeze background page scroll when modal/drawer is open
   useEffect(() => {
@@ -233,19 +230,19 @@ export const DecisionLogDemo: React.FC<DecisionLogDemoProps> = ({ onNavigate, on
     }
   };
 
-  // Dynamic Category Colors
-  const getCategoryBgColor = (cat: string) => {
+
+  const getCategoryBorderColor = (cat: string) => {
     switch (cat.toLowerCase()) {
       case 'frontend':
-        return 'bg-indigo-velvet-500';
+        return 'border-l-indigo-velvet-500';
       case 'design system':
-        return 'bg-mauve-magic-500';
+        return 'border-l-mauve-magic-500';
       case 'infrastructure':
-        return 'bg-amber-500';
+        return 'border-l-amber-500';
       case 'security':
-        return 'bg-rose-500';
+        return 'border-l-rose-500';
       default:
-        return 'bg-royal-violet-500';
+        return 'border-l-royal-violet-500';
     }
   };
 
@@ -353,14 +350,6 @@ export const DecisionLogDemo: React.FC<DecisionLogDemoProps> = ({ onNavigate, on
     }
   };
 
-  // Copy Link/Metadata Action
-  const handleCopyLink = (dec: Decision) => {
-    const textToCopy = `Decision Log URL Mock: [${dec.title}] status: ${dec.status}, impact: ${dec.impact}, rationale: "${dec.rationale}" - by ${dec.authorName}`;
-    navigator.clipboard.writeText(textToCopy);
-    setCopiedId(dec.id);
-    showToast('📋 Copied summary details to clipboard!');
-    setTimeout(() => setCopiedId(null), 2000);
-  };
 
   // Reset Demo to Default State
   const handleResetDemo = () => {
@@ -519,7 +508,7 @@ export const DecisionLogDemo: React.FC<DecisionLogDemoProps> = ({ onNavigate, on
         />
 
         {/* Panel content: 100vh Right-aligned sliding drawer */}
-        <div className="relative w-full max-w-xl bg-[#0c0021] border-l border-indigo-ink-500/30 shadow-2xl h-screen flex flex-col overflow-hidden animate-slide-in-right z-10 text-left">
+        <div className="relative w-full max-w-xl bg-dark-amethyst-500 border-l border-indigo-ink-500/30 shadow-2xl h-screen flex flex-col overflow-hidden animate-slide-in-right z-10 text-left">
           
           {/* Drawer Header */}
           <div className="p-6 border-b border-indigo-ink-500/15 flex items-center justify-between">
@@ -639,7 +628,7 @@ export const DecisionLogDemo: React.FC<DecisionLogDemoProps> = ({ onNavigate, on
         />
 
         {/* Panel content: 100vh Right-aligned sliding drawer */}
-        <div className="relative w-full max-w-xl bg-[#0c0021] border-l border-indigo-ink-500/30 shadow-2xl h-full flex flex-col overflow-hidden animate-slide-in-right z-10 text-left">
+        <div className="relative w-full max-w-xl bg-dark-amethyst-500 border-l border-indigo-ink-500/30 shadow-2xl h-full flex flex-col overflow-hidden animate-slide-in-right z-10 text-left">
           
           {/* Drawer Header */}
           <div className="p-6 border-b border-indigo-ink-500/15 flex items-center justify-between">
@@ -712,10 +701,10 @@ export const DecisionLogDemo: React.FC<DecisionLogDemoProps> = ({ onNavigate, on
                     onChange={(e) => setFormStatus(e.target.value as Decision['status'])}
                     className="w-full px-3 py-2 bg-violet-midnight-500/30 border border-indigo-ink-500/30 text-white rounded-xl focus:outline-none focus:border-royal-violet-500 focus:ring-1 focus:ring-royal-violet-500 text-xs transition-all cursor-pointer"
                   >
-                    <option value="Active">Active / Approved</option>
-                    <option value="Proposed">Proposed</option>
-                    <option value="Superseded">Superseded</option>
-                    <option value="Deprecated">Deprecated</option>
+                    <option className="bg-dark-amethyst-500 text-white" value="Active">Active / Approved</option>
+                    <option className="bg-dark-amethyst-500 text-white" value="Proposed">Proposed</option>
+                    <option className="bg-dark-amethyst-500 text-white" value="Superseded">Superseded</option>
+                    <option className="bg-dark-amethyst-500 text-white" value="Deprecated">Deprecated</option>
                   </select>
                 </div>
 
@@ -728,9 +717,9 @@ export const DecisionLogDemo: React.FC<DecisionLogDemoProps> = ({ onNavigate, on
                     onChange={(e) => setFormImpact(e.target.value as Decision['impact'])}
                     className="w-full px-3 py-2 bg-violet-midnight-500/30 border border-indigo-ink-500/30 text-white rounded-xl focus:outline-none focus:border-royal-violet-500 focus:ring-1 focus:ring-royal-violet-500 text-xs transition-all cursor-pointer"
                   >
-                    <option value="High">High</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Low">Low</option>
+                    <option className="bg-dark-amethyst-500 text-white" value="High">High</option>
+                    <option className="bg-dark-amethyst-500 text-white" value="Medium">Medium</option>
+                    <option className="bg-dark-amethyst-500 text-white" value="Low">Low</option>
                   </select>
                 </div>
               </div>
@@ -935,41 +924,43 @@ export const DecisionLogDemo: React.FC<DecisionLogDemoProps> = ({ onNavigate, on
         </div>
       </div>
 
-      {/* Dynamic Category Chips - aware of search queries, status filters, and active category options */}
-      <div className="flex flex-wrap items-center gap-2 mb-4 text-left">
-        <span className="text-xs text-mauve-600 font-semibold mr-1">Category Chips:</span>
-        <button
-          onClick={() => setCategoryFilter('All')}
-          className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer focus:outline-none ${
-            categoryFilter === 'All'
-              ? 'bg-royal-violet-600 text-white border-royal-violet-500 shadow-md'
-              : 'bg-dark-amethyst-500/50 text-mauve-600 border-indigo-ink-500/15 hover:text-white'
-          }`}
-        >
-          All ({getAllCategoryCount()})
-        </button>
-        {categories.map(cat => {
-          const count = getCategoryCount(cat);
-          const isSelected = categoryFilter === cat;
-          return (
-            <button
-              key={cat}
-              onClick={() => setCategoryFilter(isSelected ? 'All' : cat)}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer focus:outline-none ${
-                isSelected
-                  ? 'bg-royal-violet-600 text-white border-royal-violet-500 shadow-md'
-                  : 'bg-dark-amethyst-500/50 text-mauve-600 border-indigo-ink-500/15 hover:text-white font-medium'
-              }`}
-            >
-              {cat} ({count})
-            </button>
-          );
-        })}
+      {/* Dynamic Category Chips - horizontally scrollable */}
+      <div className="flex items-center gap-2 mb-4 text-left">
+        <span className="text-xs text-mauve-600 font-semibold mr-1 whitespace-nowrap">Categories:</span>
+        <div className="flex overflow-x-auto gap-1.5 scrollbar-none py-1 flex-grow">
+          <button
+            onClick={() => setCategoryFilter('All')}
+            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer focus:outline-none whitespace-nowrap ${
+              categoryFilter === 'All'
+                ? 'bg-royal-violet-600 text-white border-royal-violet-500 shadow-md'
+                : 'bg-dark-amethyst-500/50 text-mauve-600 border-indigo-ink-500/15 hover:text-white hover:bg-royal-violet-600/10'
+            }`}
+          >
+            All ({getAllCategoryCount()})
+          </button>
+          {categories.map(cat => {
+            const count = getCategoryCount(cat);
+            const isSelected = categoryFilter === cat;
+            return (
+              <button
+                key={cat}
+                onClick={() => setCategoryFilter(isSelected ? 'All' : cat)}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer focus:outline-none whitespace-nowrap ${
+                  isSelected
+                    ? 'bg-royal-violet-600 text-white border-royal-violet-500 shadow-md'
+                    : 'bg-dark-amethyst-500/50 text-mauve-600 border-indigo-ink-500/15 hover:text-white hover:bg-royal-violet-600/10'
+                }`}
+              >
+                {cat} ({count})
+              </button>
+            );
+          })}
+        </div>
 
         {/* Clear/Filter applied indicators */}
         {categoryFilter !== 'All' && (
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-royal-violet-600/20 text-mauve-magic-500 border border-royal-violet-500/30">
-            Active Filter: {categoryFilter}
+          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-royal-violet-600/20 text-mauve-magic-500 border border-royal-violet-500/25 whitespace-nowrap">
+            Active: {categoryFilter}
             <button 
               onClick={() => setCategoryFilter('All')}
               className="hover:text-white cursor-pointer ml-1"
@@ -981,21 +972,23 @@ export const DecisionLogDemo: React.FC<DecisionLogDemoProps> = ({ onNavigate, on
         )}
       </div>
 
-      {/* Status Filter Tabs - fully dynamic counts */}
-      <div className="flex overflow-x-auto gap-2 pb-3 mb-6 scrollbar-none border-b border-indigo-ink-500/10">
+      {/* Status Filter Tabs - styled as Segmented Controls */}
+      <div className="p-1 bg-dark-amethyst-500/60 border border-indigo-ink-500/15 rounded-xl flex gap-1 w-fit max-w-full overflow-x-auto mb-6 scrollbar-none">
         {['All', 'Active', 'Proposed', 'Superseded', 'Deprecated'].map(status => {
           const count = status === 'All' ? getAllStatusCount() : getStatusCount(status);
+          const isActive = statusFilter === status;
           return (
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer border transition-all duration-200 whitespace-nowrap focus:outline-none ${
-                statusFilter === status 
-                  ? 'bg-royal-violet-600 text-white border-royal-violet-500 shadow-md shadow-royal-violet-950/20' 
-                  : 'bg-dark-amethyst-500/50 text-mauve-600 hover:text-white border-indigo-ink-500/15'
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all duration-200 whitespace-nowrap focus:outline-none flex items-center gap-1.5 ${
+                isActive 
+                  ? 'bg-royal-violet-600 text-white shadow-md' 
+                  : 'text-mauve-600 hover:text-white hover:bg-indigo-ink-500/10'
               }`}
             >
-              {status} <span className="ml-1 opacity-60 text-[10px] px-1.5 py-0.5 rounded-full bg-violet-midnight-500/50">{count}</span>
+              <span>{status}</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isActive ? 'bg-royal-violet-700 text-white' : 'bg-dark-amethyst-500/50 text-mauve-600'}`}>{count}</span>
             </button>
           );
         })}
@@ -1041,18 +1034,39 @@ export const DecisionLogDemo: React.FC<DecisionLogDemoProps> = ({ onNavigate, on
                 }`} />
               </div>
 
-              {/* Card content with Category Color Bar at the Top */}
+              {/* Card content with Category Color Bar on the Left & Hover Edit/Delete Action Icons */}
               <div 
                 onClick={() => {
                   setSelectedDecision(dec);
                   setIsDetailDrawerOpen(true);
                 }}
-                className="cursor-pointer border border-indigo-ink-500/20 bg-gradient-to-b from-violet-midnight-500/30 to-dark-amethyst-500/50 rounded-2xl hover:border-royal-violet-500/40 hover:shadow-md hover:shadow-royal-violet-500/5 transition-all duration-300 relative overflow-hidden"
+                className={`cursor-pointer border border-indigo-ink-500/20 border-l-4 ${getCategoryBorderColor(dec.category)} bg-dark-amethyst-500/30 rounded-r-2xl rounded-l-md hover:border-royal-violet-500/40 hover:shadow-md hover:shadow-royal-violet-500/5 transition-all duration-300 relative overflow-hidden group`}
               >
-                {/* Same color line as the category color at the top */}
-                <div className={`h-1.5 w-full ${getCategoryBgColor(dec.category)}`} />
+                {/* Actions toolbar on card */}
+                <div className="absolute right-3 top-3 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenEdit(dec);
+                    }}
+                    className="p-1.5 rounded-lg bg-dark-amethyst-500/90 border border-indigo-ink-500/30 text-mauve-600 hover:text-white hover:border-royal-violet-500 transition-colors cursor-pointer"
+                    title="Edit Decision"
+                  >
+                    <Edit2 className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteDecision(dec.id);
+                    }}
+                    className="p-1.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white transition-colors cursor-pointer"
+                    title="Delete Decision"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
 
-                <div className="p-5">
+                <div className="p-4 pr-16 sm:pr-20">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-2">
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-mauve-600 font-semibold tracking-wider uppercase">{dec.date}</span>

@@ -1,0 +1,97 @@
+/* Design System Theme Variables */
+
+:root {
+  /* Font Family Definition */
+  --font-primary: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* ========================================== */
+  /* LIGHT MODE VARIABLES (DEFAULT)             */
+  /* ========================================== */
+  
+  /* Primary Semantic Colors */
+  --color-bg-app: #fbf9ff;
+  --color-bg-card: #ffffff;
+  --color-bg-nav: rgba(255, 255, 255, 0.85);
+  --color-bg-footer: #f4f0fa;
+  --color-bg-drawer: #ffffff;
+  
+  /* Borders */
+  --color-border-primary: rgba(123, 44, 191, 0.15);
+  --color-border-hover: rgba(123, 44, 191, 0.4);
+  
+  /* Typography Toggle variables (Light = Dark theme, Dark = Light theme) */
+  --color-white-toggle: #0c0021; /* text-white becomes dark purple */
+  --color-black-toggle: #ffffff; /* text-black becomes white */
+  
+  /* Redefining existing tailwind names for theme transitions */
+  --color-dark-amethyst-100: #fbfbfb;
+  --color-dark-amethyst-200: #fcf9ff;
+  --color-dark-amethyst-300: #f7f3fd;
+  --color-dark-amethyst-400: #ffffff; /* white background */
+  --color-dark-amethyst-500: #f5effe;
+  --color-dark-amethyst-600: #f0e6ff;
+  --color-dark-amethyst-700: #e5d2f5;
+  --color-dark-amethyst-800: #8843ff;
+  --color-dark-amethyst-900: #0c0021; /* text-mauve-900 is dark */
+  
+  --color-violet-midnight-200: #f4f0fa;
+  --color-violet-midnight-500: #ffffff; /* maps dark midnight bg to white */
+  --color-violet-midnight-600: #7b2cbf;
+  
+  --color-indigo-ink-100: #fcfcff;
+  --color-indigo-ink-500: #e2d7f5; /* light border / bg color */
+  --color-indigo-ink-600: #d6c4f2;
+  
+  --color-royal-violet-500: #7b2cbf;
+  --color-royal-violet-600: #6a1baf;
+  --color-mauve-magic-500: #9d4edd;
+  
+  --color-mauve-600: #5c526b; /* text-mauve-600 is dark gray-purple */
+  --color-mauve-900: #0c0021; /* text-mauve-900 is almost black */
+}
+
+/* ========================================== */
+/* DARK MODE VARIABLES                        */
+/* ========================================== */
+.dark {
+  /* Primary Semantic Colors */
+  --color-bg-app: #0c0021;
+  --color-bg-card: rgba(36, 0, 70, 0.4);
+  --color-bg-nav: rgba(12, 0, 33, 0.85);
+  --color-bg-footer: #10002b;
+  --color-bg-drawer: #10002b;
+  
+  /* Borders */
+  --color-border-primary: rgba(123, 44, 191, 0.2);
+  --color-border-hover: rgba(123, 44, 191, 0.5);
+  
+  /* Typography Toggle variables */
+  --color-white-toggle: #ffffff; /* text-white remains white */
+  --color-black-toggle: #000000; /* text-black remains black */
+  
+  /* Redefining existing tailwind names for theme transitions */
+  --color-dark-amethyst-100: #030008;
+  --color-dark-amethyst-200: #060010;
+  --color-dark-amethyst-300: #090018;
+  --color-dark-amethyst-400: #0c0021; /* dark amethyst background */
+  --color-dark-amethyst-500: #10002b;
+  --color-dark-amethyst-600: #310087;
+  --color-dark-amethyst-700: #5400e4;
+  --color-dark-amethyst-800: #8843ff;
+  --color-dark-amethyst-900: #c4a1ff;
+  
+  --color-violet-midnight-200: #0f001d;
+  --color-violet-midnight-500: #240046; /* original midnight purple */
+  --color-violet-midnight-600: #52009f;
+  
+  --color-indigo-ink-100: #0c0216;
+  --color-indigo-ink-500: #3c096c;
+  --color-indigo-ink-600: #650fb5;
+  
+  --color-royal-violet-500: #7b2cbf;
+  --color-royal-violet-600: #954bd6;
+  --color-mauve-magic-500: #c77dff;
+  
+  --color-mauve-600: #e0aaff; /* text-mauve-600 is light mauve */
+  --color-mauve-900: #f9eeff; /* text-mauve-900 is almost white */
+}

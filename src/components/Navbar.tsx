@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, Layers } from 'lucide-react';
+import { Menu, X, Layers, Sun, Moon } from 'lucide-react';
 import { Button } from '../common';
 import { NAV_ITEMS } from '../constants';
 
 interface NavbarProps {
   currentView: 'landing' | 'demo';
   onNavigate: (view: 'landing' | 'demo') => void;
+  theme: 'light' | 'dark';
+  onThemeToggle: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
+export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, theme, onThemeToggle }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -44,7 +46,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
                 <Layers className="h-5 w-5 text-mauve-magic-500" />
               </div>
             </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-white via-mauve-700 to-mauve-500 bg-clip-text text-transparent group-hover:from-mauve-magic-500 group-hover:to-white transition-all duration-300">
+            <span className="text-xl font-bold text-royal-violet-500 dark:text-mauve-magic-500 group-hover:text-royal-violet-600 dark:group-hover:text-white transition-all duration-300">
               Decision Log
             </span>
           </div>
@@ -69,7 +71,19 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
           </div>
 
           {/* Desktop CTA */}
-          <div className="hidden md:flex items-center">
+          <div className="hidden md:flex items-center gap-4">
+            <button
+              onClick={onThemeToggle}
+              className="p-2 rounded-xl border border-indigo-ink-500/15 bg-indigo-ink-100/5 text-mauve-600 hover:text-white hover:border-royal-violet-500/50 hover:bg-royal-violet-500/10 transition-all cursor-pointer focus:outline-none flex items-center justify-center"
+              title={theme === 'light' ? 'Switch to Dark Theme' : 'Switch to Light Theme'}
+            >
+              {theme === 'light' ? (
+                <Moon className="h-4.5 w-4.5 text-royal-violet-500" />
+              ) : (
+                <Sun className="h-4.5 w-4.5 text-amber-400" />
+              )}
+            </button>
+            
             {currentView === 'landing' ? (
               <Button variant="primary" size="sm" onClick={handleDemoClick}>
                 Try Demo
@@ -82,7 +96,19 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
           </div>
 
           {/* Mobile Menu Toggle */}
-          <div className="flex md:hidden">
+          <div className="flex md:hidden items-center gap-3">
+            <button
+              onClick={onThemeToggle}
+              className="p-2 rounded-xl border border-indigo-ink-500/15 bg-indigo-ink-100/5 text-mauve-600 hover:text-white hover:border-royal-violet-500/50 hover:bg-royal-violet-500/10 transition-all cursor-pointer focus:outline-none flex items-center justify-center"
+              title={theme === 'light' ? 'Switch to Dark Theme' : 'Switch to Light Theme'}
+            >
+              {theme === 'light' ? (
+                <Moon className="h-4.5 w-4.5 text-royal-violet-500" />
+              ) : (
+                <Sun className="h-4.5 w-4.5 text-amber-400" />
+              )}
+            </button>
+            
             <button
               onClick={() => setIsOpen(!isOpen)}
               className="text-mauve-600 hover:text-white p-2 rounded-lg hover:bg-indigo-ink-500/20 focus:outline-none transition-colors cursor-pointer"

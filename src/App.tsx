@@ -16,6 +16,19 @@ import {
 function App() {
   const [currentView, setCurrentView] = useState<'landing' | 'demo'>('landing');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    return (localStorage.getItem('theme') as 'light' | 'dark') || 'light';
+  });
+
+  // Toggle class dark on document.documentElement
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
 
   // Smooth scroll to top when changing views
   useEffect(() => {
@@ -25,7 +38,12 @@ function App() {
   return (
     <div className="min-h-screen bg-dark-amethyst-400 text-mauve-900 flex flex-col relative font-sans antialiased">
       {/* Navigation Headers */}
-      <Navbar currentView={currentView} onNavigate={setCurrentView} />
+      <Navbar 
+        currentView={currentView} 
+        onNavigate={setCurrentView} 
+        theme={theme} 
+        onThemeToggle={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')} 
+      />
       {currentView === 'landing' && <PromoBanner />}
       
       {/* Main Landing Sections */}
