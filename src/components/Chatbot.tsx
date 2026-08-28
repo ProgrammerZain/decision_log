@@ -17,6 +17,7 @@ export const Chatbot: React.FC = () => {
   const [isTyping, setIsTyping] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -27,6 +28,16 @@ export const Chatbot: React.FC = () => {
       scrollToBottom();
     }
   }, [isOpen, messages, isTyping]);
+
+  // Autofocus input field when chatbot opens
+  useEffect(() => {
+    if (isOpen) {
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,10 +84,10 @@ export const Chatbot: React.FC = () => {
       {/* Floating Toggle Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative group p-4 rounded-full bg-gradient-to-r from-royal-violet-600 to-mauve-magic-500 hover:from-royal-violet-500 hover:to-mauve-magic-400 text-white shadow-xl shadow-royal-violet-950/30 cursor-pointer active:scale-95 transition-all duration-300"
+        className="relative group p-4 rounded-full bg-royal-violet-600 hover:bg-royal-violet-500 text-white shadow-xl shadow-royal-violet-950/30 cursor-pointer active:scale-95 transition-all duration-300"
         aria-label="Toggle assistant chat"
       >
-        <div className="absolute -inset-1.5 bg-gradient-to-r from-royal-violet-500 to-mauve-magic-500 rounded-full blur-md opacity-30 group-hover:opacity-60 transition-opacity duration-300" />
+        <div className="absolute -inset-1.5 bg-royal-violet-500 rounded-full blur-md opacity-30 group-hover:opacity-60 transition-opacity duration-300" />
         
         {/* Pulsating badge indicator */}
         <span className="absolute top-0 right-0 flex h-3.5 w-3.5">
@@ -87,16 +98,16 @@ export const Chatbot: React.FC = () => {
         {isOpen ? <X className="h-6 w-6 relative z-10" /> : <MessageSquare className="h-6 w-6 relative z-10" />}
       </button>
 
-      {/* Chat Window Panel */}
+      {/* Chat Window Panel - using fixed positioning relative to viewport for mobile responsiveness */}
       <div
         className={`
-          absolute bottom-20 right-0 w-[350px] sm:w-[380px] h-[480px] rounded-2xl border border-indigo-ink-500/30 
-          bg-dark-amethyst-500/95 backdrop-blur-xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 origin-bottom-right
+          fixed bottom-24 right-4 left-4 sm:left-auto sm:right-6 sm:w-[380px] h-[480px] max-h-[80vh] rounded-2xl border border-indigo-ink-500/30 
+          bg-dark-amethyst-500/95 backdrop-blur-xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 origin-bottom-right z-50
           ${isOpen ? 'scale-100 opacity-100 translate-y-0 pointer-events-auto' : 'scale-75 opacity-0 translate-y-4 pointer-events-none'}
         `}
       >
         {/* Header */}
-        <div className="p-4 bg-gradient-to-r from-violet-midnight-500 to-indigo-ink-500 border-b border-indigo-ink-500/20 flex items-center justify-between text-left">
+        <div className="p-4 bg-violet-midnight-500 border-b border-indigo-ink-500/20 flex items-center justify-between text-left">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-royal-violet-600/30 border border-royal-violet-500/30 text-mauve-magic-500">
               <Bot className="h-5 w-5" />
@@ -169,6 +180,7 @@ export const Chatbot: React.FC = () => {
         {/* Input Footer */}
         <form onSubmit={handleSendMessage} className="p-3 bg-violet-midnight-500/30 border-t border-indigo-ink-500/15 flex gap-2">
           <input
+            ref={inputRef}
             type="text"
             placeholder="Ask about 'trial' or 'pricing'..."
             value={inputText}
