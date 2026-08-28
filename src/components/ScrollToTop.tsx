@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowUp } from 'lucide-react';
 
-export const ScrollToTop: React.FC = () => {
+interface ScrollToTopProps {
+  isHidden?: boolean;
+}
+
+export const ScrollToTop: React.FC<ScrollToTopProps> = ({ isHidden = false }) => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -23,6 +27,8 @@ export const ScrollToTop: React.FC = () => {
     });
   };
 
+  const showButton = isVisible && !isHidden;
+
   return (
     <button
       onClick={scrollToTop}
@@ -31,7 +37,7 @@ export const ScrollToTop: React.FC = () => {
         bg-dark-amethyst-500/80 backdrop-blur-md text-mauve-600 hover:text-white 
         hover:border-royal-violet-500/50 hover:bg-indigo-ink-500/30 shadow-lg shadow-dark-amethyst-100/10 
         transition-all duration-300 cursor-pointer active:scale-95
-        ${isVisible ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-4 pointer-events-none'}
+        ${showButton ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-4 pointer-events-none'}
       `}
       aria-label="Scroll to top of page"
     >

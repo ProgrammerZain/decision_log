@@ -4,7 +4,11 @@ import { Button } from '../common';
 import { HERO_DECISION_CARDS } from '../constants';
 import type { DecisionCard } from '../types';
 
-export const Hero: React.FC = () => {
+interface HeroProps {
+  onNavigate: (view: 'landing' | 'demo') => void;
+}
+
+export const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
   const [email, setEmail] = useState('');
 
   const handleStartTrial = (e: React.FormEvent) => {
@@ -75,20 +79,30 @@ export const Hero: React.FC = () => {
               Stop losing crucial context in buried Slack threads, Jira backlogs, and outdated Notion pages. Decision Log builds a searchable, collaborative timeline of architectural and product choices.
             </p>
 
-            {/* Trial CTA Email Form */}
-            <form onSubmit={handleStartTrial} className="flex flex-col sm:flex-row gap-3 max-w-lg mb-8">
-              <input
-                type="email"
-                placeholder="Enter your work email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="flex-grow px-5 py-3 rounded-xl bg-violet-midnight-500/50 border border-indigo-ink-500/40 text-white placeholder-mauve-600/70 focus:outline-none focus:border-royal-violet-500 focus:ring-1 focus:ring-royal-violet-500 backdrop-blur-sm text-sm"
-              />
-              <Button type="submit" variant="accent">
-                Start Trial Free <ArrowRight className="ml-1.5 h-4 w-4" />
+            {/* Trial CTA Email Form & Sandbox CTA */}
+            <div className="flex flex-col gap-3.5 mb-8 max-w-lg">
+              <form onSubmit={handleStartTrial} className="flex flex-col sm:flex-row gap-2.5">
+                <input
+                  type="email"
+                  placeholder="Enter your work email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="flex-grow px-5 py-3 rounded-xl bg-violet-midnight-500/50 border border-indigo-ink-500/40 text-white placeholder-mauve-600/70 focus:outline-none focus:border-royal-violet-500 focus:ring-1 focus:ring-royal-violet-500 backdrop-blur-sm text-sm"
+                />
+                <Button type="submit" variant="primary" className="whitespace-nowrap">
+                  Start Trial Free
+                </Button>
+              </form>
+              <Button 
+                type="button" 
+                variant="accent" 
+                onClick={() => onNavigate('demo')}
+                className="w-full shadow-lg shadow-mauve-magic-500/10"
+              >
+                Try Interactive Sandbox App <ArrowRight className="ml-1.5 h-4 w-4" />
               </Button>
-            </form>
+            </div>
 
             {/* Quick stats / notes */}
             <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-mauve-600">

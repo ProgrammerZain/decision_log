@@ -7,3 +7,5 @@ export * from './Features';
 export * from './Footer';
 export * from './Chatbot';
 export * from './ScrollToTop';
+export * from './DecisionLogDemo';
+
